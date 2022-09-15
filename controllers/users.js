@@ -6,6 +6,7 @@ const BadRequestCode = require('../utils/BadRequestCode');
 const UnauthorizedError = require('../utils/UnauthorizedError');
 const ConflictError = require('../utils/ConflictError');
 const InternalServerError = require('../utils/InternalServerError');
+const { jwtSecretKey } = require('../configuration/configuration');
 
 module.exports.getUserOne = (req, res, next) => {
   User.findById(req.user._id)
@@ -69,13 +70,12 @@ module.exports.updateUser = (req, res, next) => {
 };
 
 module.exports.login = (req, res, next) => {
-  const { NODE_ENV, JWT_SECRET } = process.env;
   const { email, password } = req.body;
 
   return User.findUserByCredentials(email, password)
     .then((user) => {
       // создадим токен
-      const token = jwt.sign({ _id: user._id }, NODE_ENV === 'production' ? JWT_SECRET : 'dev-secret', { expiresIn: '7d' });
+      const token = jwt.sign({ _id: user._id }, jwtSecretKey, { expiresIn: '7d' });
 
       // вернём токен
       res.send({ token });
