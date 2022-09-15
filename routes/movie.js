@@ -7,7 +7,7 @@ const {
 const movieRoutes = express.Router();
 
 movieRoutes.get('/movies', getMovie);
-movieRoutes.post('/movies',  celebrate({
+movieRoutes.post('/movies', celebrate({
   body: Joi.object().keys({
     country: Joi.string().required(),
     director: Joi.string().required(),

@@ -27,18 +27,19 @@ module.exports.createUser = (req, res, next) => {
         password: hash,
       })
         .then((user) => {
-          res.send(user);
+          res.send({
+            email: user.email,
+            name: user.name,
+          });
         })
         .catch((err) => {
           if (err.code === 11000) {
-            next(new ConflictError('Пользователь с таким email уже зарегистрирован'));
-            return;
+            return next(new ConflictError('Пользователь с таким email уже зарегистрирован'));
           }
           if (err.name === 'ValidationError') {
-            next(new BadRequestCode('Переданы некорректные данные'));
-            return;
+            return next(new BadRequestCode('Переданы некорректные данные'));
           }
-          next(err);
+          return next(err);
         });
     })
     .catch(() => {
@@ -51,30 +52,35 @@ module.exports.updateUser = (req, res, next) => {
   const userId = req.user._id;
   User.findByIdAndUpdate(userId, { name, email }, { new: true, runValidators: true })
     .then((user) => {
-      res.send(user);
+      if (!user) {
+        return next(new NotFoundError('Пользователь не найден'));
+      }
+      return res.send(user);
     })
     .catch((err) => {
-      if (err.name === 'ValidationError') {
-        next(new BadRequestCode('Переданы некорректные данные'));
+      if (err.name === 'CastError' || err.name === 'ValidationError') {
+        return next(new BadRequestCode('Переданы некорректные данные'));
       }
-      if (err.name === 'CastError') {
-        next(new NotFoundError('Пользователь не найден'));
-      } else { next(err); }
+      if (err.code === 11000) {
+        return next(new ConflictError('Пользователь с таким email уже зарегистрирован'));
+      }
+      return next(err);
     });
 };
 
 module.exports.login = (req, res, next) => {
+  const { NODE_ENV, JWT_SECRET } = process.env;
   const { email, password } = req.body;
 
   return User.findUserByCredentials(email, password)
     .then((user) => {
       // создадим токен
-      const token = jwt.sign({ _id: user._id }, 'some-secret-key', { expiresIn: '7d' });
+      const token = jwt.sign({ _id: user._id }, NODE_ENV === 'production' ? JWT_SECRET : 'dev-secret', { expiresIn: '7d' });
 
       // вернём токен
       res.send({ token });
     })
     .catch(() => {
-      next(new UnauthorizedError('Ошибка аунтификации'));
+      next(new UnauthorizedError('Ошибка авторизации'));
     });
 };

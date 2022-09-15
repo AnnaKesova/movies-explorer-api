@@ -6,8 +6,8 @@ const bodyParser = require('body-parser');
 const { errors } = require('celebrate');
 const auth = require('./middlewares/auth');
 const { requestLogger, errorLogger } = require('./middlewares/logger');
-
-const { PORT = 3001 } = process.env;
+const NotFoundError = require('./utils/NotFoundError');
+const { PORT, DATABASE_URL } = require('./configuration/configuration');
 
 const app = express();
 
@@ -33,6 +33,10 @@ app.use(errorLogger);
 
 app.use(errors()); // обработчик ошибок celebrate
 
+app.use('/', auth, (req, res, next) => {
+  next(new NotFoundError('Нет такой страницы'));
+});
+
 app.use((err, req, res, next) => {
   // если у ошибки нет статуса, выставляем 500
   const { statusCode = 500, message } = err;
@@ -49,7 +53,7 @@ app.use((err, req, res, next) => {
 });
 
 async function main() {
-  await mongoose.connect('mongodb://localhost:27017/bitfilmsdb');
+  await mongoose.connect(DATABASE_URL);
   console.log('Connected to db');
 
   await app.listen(PORT, () => {
