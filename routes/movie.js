@@ -41,5 +41,4 @@ movieRoutes.delete('/movies/:_id', celebrate({
   }),
 }), deleteMovie);
 
-
 module.exports = movieRoutes;
